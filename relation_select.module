@@ -1392,3 +1392,66 @@ function relation_select_entity_load() {
   // Any better place anyone can think of to put this?
 
 }
+
+/**
+ * Implements hook_views_query_alter
+ */
+function relation_select_views_query_alter(&$view, &$query) {
+  // get the fields used in this query
+  $fields = $query->fields;
+
+  // check for fields
+  $field_name = _relation_select_view_has_field($fields);
+  if (!$field_name) {
+    return;
+  }
+
+  // find the relation table in relationships member
+  $relation_table = array();
+  foreach($query->relationships as $alias => info) {
+    if ($info['table'] == "relation") {
+      $relation_table = $info + array("alias" => $alias);
+      break;
+    }
+  }
+
+  // if this view has a field of type relation select, then edit
+  // the join to look at our tables.
+  $join = &$query->table_queue[$field_name['table']]['join']; 
+  $join->table = $field_name['table'];
+  $join->left_table = $relation_table['alias'];
+  $join->field = $field_name['clean'] . '_relation_id';
+  $join->left_field = "rid";
+}
+
+function _relation_select_view_has_field($fields) {
+  global $relation_select_fields;
+  global $relation_select_field_names;
+
+  if (!$relation_select_fields) {
+    // get all fields of type relation_select
+    $relation_select_fields = db_select('field_config', 'fc')
+      ->fields('fc', array('field_name'))
+      ->condition('type', 'relation_select', '=')
+      ->execute()
+      ->fetchAllAssoc('field_name');
+  }
+
+  $relation_select_field_names = array_keys($relation_select_fields);
+
+  $edit_query = false;
+  foreach($fields as $name => $info) {
+    $table_name = $info['table'];
+
+    if (strrpos($table_name, "field_data_") !== false)
+    {
+      $table_name = substr($table_name, strrpos($table_name, "field_data_") + strlen("field_data_"));
+    }    
+
+    if (in_array($table_name, $relation_select_field_names)) {
+      return $info + array("clean" => $table_name);
+    }
+  }
+
+  return false;
+}

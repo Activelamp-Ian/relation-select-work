@@ -61,7 +61,6 @@ class relation_select_plugin_style extends views_plugin_style {
   }
 
   function query() {
-    dpm("Hello");
     if ($this->view->query->definition['handler'] == 'efq_views_plugin_query') {
       $this->view->efq = TRUE;
     }
@@ -79,7 +78,6 @@ class relation_select_plugin_style extends views_plugin_style {
   }
 
   function render() {
-    dpm("hello");
     // Add a close button
     $this->view->attachment_before .= theme('relation_select_attachment_before', array(
       'view' => $this->view
