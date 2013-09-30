@@ -1408,7 +1408,7 @@ function relation_select_views_query_alter(&$view, &$query) {
 
   // find the relation table in relationships member
   $relation_table = array();
-  foreach($query->relationships as $alias => info) {
+  foreach($query->relationships as $alias => $info) {
     if ($info['table'] == "relation") {
       $relation_table = $info + array("alias" => $alias);
       break;
