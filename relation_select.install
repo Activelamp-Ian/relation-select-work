@@ -18,6 +18,27 @@ function relation_select_update_7100(&$sandbox) {
     ->execute();
 }
 
+function relation_select_update_7300(&$sandbox) {
+  $extras = array(
+    "type" => "int",
+    "not null" => TRUE,
+    "default" => 0
+  );
+  // get all fields of type relation_select
+  $relation_select_fields = db_select('field_config', 'fc')
+    ->fields('fc', array('field_name'))
+    ->condition('type', 'relation_select', '=')
+    ->execute()
+    ->fetchAllAssoc('field_name');
+
+  $relation_select_field_names = array_keys($relation_select_fields);
+
+  foreach ($relation_select_field_names as $key => $name) {
+    db_add_field("field_data_" . $name, $name . "_relation_id", $extras);
+    db_add_field("field_revision_" . $name, "relation_id", $extras);
+  } 
+}
+
 function relation_select_field_schema($field) {
   if ($field['type'] == 'relation_select') {
     return array(

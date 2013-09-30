@@ -1037,13 +1037,12 @@ function relation_select_order_items($entity_id, $field_name, $loaded, $relation
   else {     
     foreach ($form_items as $order_key => $info) {
       $current_delta = key($info); 
-      $true_info = current($info);
-      $relation_id = $true_info['relation_id'];
+      $true_info = current($info);      
       $is_new = !isset($true_info['endpoints']) || count($true_info['endpoints']) == 0 ? TRUE : FALSE;
       if ($is_new && !isset($true_info['relation_id'])) {
         continue;
       }
-      
+      $relation_id = $true_info['relation_id'];
       $revision_id = $relation_revision_relation[$relation_id];  
 
       if ($order_key != $current_delta) {
