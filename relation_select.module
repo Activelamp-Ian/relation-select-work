@@ -1407,13 +1407,18 @@ function relation_select_views_query_alter(&$view, &$query) {
 
   // find the relation table in relationships member
   $relation_table = array();
+  $found_relation = false;
   foreach($query->relationships as $alias => $info) {
     if ($info['table'] == "relation") {
       $relation_table = $info + array("alias" => $alias);
+      $found_relation = true;
       break;
     }
   }
 
+  if (!$found_relation) {
+    return;
+  }
   // if this view has a field of type relation select, then edit
   // the join to look at our tables.
   $join = &$query->table_queue[$field_name['table']]['join']; 
