@@ -680,6 +680,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
     else {
       $relations = relation_select_entity_get_relations($entity_type, $entity_id, $relation_type->relation_type, $field); 
     }    
+
     if (empty($relations)) {
       $relations = array();
       foreach ($items as $parent_delta => $item) {
@@ -698,22 +699,6 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
             relation_save($relation);            
           }
         }
-        // if (isset($item['endpoints']) && count($item['endpoints'])) {
-        //   // Create new relation.
-        //   $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $item['endpoints']);
-        //   $relation = relation_create($relation_type->relation_type, $endpoints_ids);
-        //   $relation_fields = field_info_instances('relation', $relation->relation_type);
-        //   if (isset($item['relation_fields'])) {
-        //     // Add relation fields.
-        //     foreach ($item['relation_fields'] as $relation_field_name => $relation_field) {
-        //       $relation->{$relation_field_name} = $relation_field;
-        //     }
-        //   }
-        //   dpm($relation);
-        //   relation_save($relation);
-        //   $relations[] = $relation;
-        // }
-
 
         // check if we are updating the field to maintain delta order.
         // We are assuming that if we are updating an field, that the 
@@ -733,7 +718,10 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
         $rids[] = $relation['relation_id'];
       }
       $relation_entities = relation_load_multiple($rids);
+
+      $item_iter = 0;
       foreach ($relations as $revision => $item) {
+        $current_item = $items[$item_iter];
         if (isset($item['endpoints']) && count($item['endpoints'])) {
           $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $item['endpoints']);
           if (isset($item['relation_id'])) {
@@ -745,15 +733,15 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
             // Create a new relation.
             $relation = relation_create($relation_type->relation_type, $endpoints_ids);
           }
-          $relation_fields = field_info_instances('relation', $relation->relation_type);
-          if (isset($item['relation_fields'])) {
-            foreach ($item['relation_fields'] as $relation_field_name => $relation_field) {
+          $relation_fields = field_info_instances('relation', $relation->relation_type);          
+          if (isset($current_item['relation_fields'])) {
+            foreach ($current_item['relation_fields'] as $relation_field_name => $relation_field) {
               if (isset($relation_fields[$relation_field_name])) {
                 // Update an existing relation field instance.
                 $langcode = array_shift(array_keys($relation_field));
                 $relation_field_items = array_shift($relation_field);
                 $relation_field = field_info_field($relation_field_name);
-                field_default_submit('relation', $relation, $relation_field, $relation_fields[$relation_field_name], $langcode, $relation_field_items, $item, $form_state);
+                field_default_submit('relation', $relation, $relation_field, $relation_fields[$relation_field_name], $langcode, $relation_field_items, $current_item, $form_state);
                 $relation->{$relation_field_name}[$langcode] = $relation_field_items;
               }
               else {
@@ -817,6 +805,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
             $relations[$revision]['relation_id'] = $rid;
           }
         }
+        $item_iter++;
       }
     }
   }
