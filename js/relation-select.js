@@ -48,6 +48,13 @@
         addCloseEventHandlers(context);
         addRowEventHandlers(context);
 
+
+        // Attach behaviors only once
+        if ($(window).data('remove_link_process') == undefined) {
+          $(window).data('remove_link_process', true);
+          Drupal.attachBehaviors();
+        }
+
       }
 
       // Events
@@ -89,7 +96,12 @@
       }
 
       function addInputRemoveLink($input){
-        $input.append($('<a class="rs-remove-item">Remove</a>').click(
+        var $label = $input.parent().siblings("label");
+        var start = $label.text().search(/\d/);
+        var end = $label.text().search(/\)/);
+
+        var relation_id = parseInt($label.text().substring(start, end));
+        $input.append($('<a href="/relation-select/delete-player/' + relation_id + '/nojs" class="rs-remove-item use-ajax">Remove</a>').click(
             handleRemoveClick));
       }
 
@@ -286,7 +298,7 @@
 
       }
 
-      init();
+      if ($(window).data('remove_link_process') == undefined) init();
 
     }
   };

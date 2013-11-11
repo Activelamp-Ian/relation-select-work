@@ -37,6 +37,13 @@ function relation_select_menu() {
     'description' => 'Add a relation.',
     'file' => 'includes/relation_select.pages.inc'
   );
+
+  $items['relation-select/delete-player/%relation'] = array(
+    'title' => t('Ajax callback for deleting relations'),
+    'page callback' => '_relation_select_handle_delete',
+    'page arguments' => array(2),
+    'access callback' => TRUE
+  );
   return $items;
 }
 
@@ -664,7 +671,7 @@ function relation_select_field_update($entity_type, $entity, $field, $instance, 
  *
  * Save an instance of a Relation Select field.
  */
-function relation_select_field_insert($entity_type, $entity, $field, $instance, $langcode, &$items, $is_update = false) {    
+function relation_select_field_insert($entity_type, $entity, $field, $instance, $langcode, &$items, $is_update = false) {   
   $relations = array();
   $entity_id = 0;
   if ($instance['widget']['type'] == 'relation_select') {
@@ -682,34 +689,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
     }    
 
     if (empty($relations)) {
-      $relations = array();
-      foreach ($items as $parent_delta => $item) {
-        foreach ($item as $delta => $current) {
-          if (isset($current['endpoints']) && count($current['endpoints'])) {
-            // Create new relation.
-            $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $current['endpoints']);
-            $relation = relation_create($relation_type->relation_type, $endpoints_ids);
-            $relation_fields = field_info_instances('relation', $relation->relation_type);
-            if (isset($current['relation_fields'])) {
-              // Add relation fields.
-              foreach ($current['relation_fields'] as $relation_field_name => $relation_field) {
-                $relation->{$relation_field_name} = $relation_field;
-              }
-            }
-            relation_save($relation);            
-          }
-        }
-
-        // check if we are updating the field to maintain delta order.
-        // We are assuming that if we are updating an field, that the 
-        // order has either been change, or remains the same.
-        if ($is_update) {    
-          $relations = relation_select_entity_get_relations($entity_type, $entity_id, $relation_type->relation_type, $field, $is_update, $items);        
-        }
-        else {
-          $relations = relation_select_entity_get_relations($entity_type, $entity_id, $relation_type->relation_type, $field); 
-        }   
-      }
+      _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, $items, $is_update);
     }
     elseif (!empty($relations)) {
       // Relations of this type already exist for this entity.
@@ -757,13 +737,18 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
           relation_save($relation);
 
         }
-        elseif (isset($item['relation_id'])) {          
+        elseif ((isset($current_item['relation_id']) || isset($item['relation_id'])) && !isset($current_item['endpoints'])) {          
           // Delete relations which no longer have endpoints.
-
           relation_delete($item['relation_id']);
         }
 
         else {          
+          if (count(array_keys($item)) <= 1) {
+            // skip this relation, it has been deleted.
+            unset($items[$item_iter]);
+            unset($relations[$revision]);
+            continue;
+          }
           // check if this is a new relationship.
           if (isset($item['delta']) && $items[$item['delta']]) {            
             // create a new relationship
@@ -798,11 +783,16 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
             $temp = $relation->endpoints[LANGUAGE_NONE][2];
             unset($relation->endpoints[LANGUAGE_NONE][2]);
             $relation->endpoints[LANGUAGE_NONE][1] = $temp;
-            
-            $rid = relation_save($relation);
-            $item['entity_id'] = $entity_info[1];
-            $relations[$revision]['entity_id'] = $entity_info[1];
-            $relations[$revision]['relation_id'] = $rid;
+            try {
+              $rid = relation_save($relation);
+              $item['entity_id'] = $entity_info[1];
+              $relations[$revision]['entity_id'] = $entity_info[1];
+              $relations[$revision]['relation_id'] = $rid;
+            }
+            catch(\Exception $e) {
+              // skip this, it was supposed to be deleted.
+              unset($relations[$revision]);
+            }
           }
         }
         $item_iter++;
@@ -830,6 +820,42 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
   if (module_exists('entity_cache')) {
     $cache_table = "cache_entity_" . $entity_type;
     cache_clear_all($entity_id, $cache_table);
+  }
+}
+
+function _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, &$items, $is_update) {
+  $relations = array();
+  foreach ($items as $parent_delta => $item) {
+    foreach ($item as $delta => $current) {
+      if (isset($current['endpoints']) && count($current['endpoints'])) {
+        // Create new relation.
+        $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $current['endpoints']);
+        $relation = relation_create($relation_type->relation_type, $endpoints_ids);
+        $relation_fields = field_info_instances('relation', $relation->relation_type);
+        if (isset($current['relation_fields'])) {
+          // Add relation fields.
+          foreach ($current['relation_fields'] as $relation_field_name => $relation_field) {
+            $relation->{$relation_field_name} = $relation_field;
+          }
+        }
+        relation_save($relation);            
+      }
+
+      else if (isset($current["relation_id"]) && !isset($current['endpoints'])) {
+        // we have a deleted relation.
+
+      }
+    }
+
+    // check if we are updating the field to maintain delta order.
+    // We are assuming that if we are updating an field, that the 
+    // order has either been change, or remains the same.
+    if ($is_update) {    
+      $relations = relation_select_entity_get_relations($entity_type, $entity_id, $relation_type->relation_type, $field, $is_update, $items);        
+    }
+    else {
+      $relations = relation_select_entity_get_relations($entity_type, $entity_id, $relation_type->relation_type, $field); 
+    }   
   }
 }
 
@@ -1447,4 +1473,11 @@ function _relation_select_view_has_field($fields) {
   }
 
   return false;
+}
+
+
+function _relation_select_handle_delete($relation, $ajax = 'no') {
+  if ($ajax != 'no') {
+    relation_delete($relation->rid);
+  }  
 }
