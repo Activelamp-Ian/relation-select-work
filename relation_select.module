@@ -730,6 +730,9 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
               }
             }
           }
+          else {
+            dpm(array("current" => $current_item, "item" => $item));
+          }
           // make sure field is updatable
           foreach($relation->endpoints[LANGUAGE_NONE] as $delta => $info) {
             $relation->endpoints[LANGUAGE_NONE][$delta]['endpoints_r_index'] = $info['r_index'];
@@ -837,14 +840,21 @@ function _relation_select_insert_no_relations($relations, $entity_type, $entity,
         // Create new relation.
         $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $current['endpoints']);
         $relation = relation_create($relation_type->relation_type, $endpoints_ids);
-        $relation_fields = field_info_instances('relation', $relation->relation_type);
-        if (isset($current['relation_fields'])) {
-          // Add relation fields.
-          foreach ($current['relation_fields'] as $relation_field_name => $relation_field) {
+        $relation_fields = field_info_instances('relation', $relation->relation_type); 
+        foreach ($item['relation_fields'] as $relation_field_name => $relation_field) {
+          if (isset($relation_fields[$relation_field_name])) {
+            // Update an existing relation field instance.
+            $langcode = array_shift(array_keys($relation_field));
+            $relation_field_items = array_shift($relation_field);
+            $relation_field = field_info_field($relation_field_name);
+            $relation->{$relation_field_name}[$langcode] = $relation_field_items;
+          }
+          else {
+            // Create a new relation field instance.
             $relation->{$relation_field_name} = $relation_field;
           }
         }
-        relation_save($relation);            
+        relation_save($relation);           
       }
 
       else if (isset($current["relation_id"]) && !isset($current['endpoints'])) {
