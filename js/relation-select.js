@@ -95,14 +95,26 @@
         }).addClass('processed');
       }
 
-      function addInputRemoveLink($input){
+      function addInputRemoveLink($input){        
         var $label = $input.parent().siblings("label");
         var start = $label.text().search(/\d/);
         var end = $label.text().search(/\)/);
 
         var relation_id = parseInt($label.text().substring(start, end));
-        $input.append($('<a href="/relation-select/delete-player/' + relation_id + '/nojs" class="rs-remove-item use-ajax">Remove</a>').click(
+        $input.append($('<a id="delete-relation-'+ relation_id + '" href="/relation-select/delete-player/' + relation_id + '/nojs" class="rs-remove-item use-ajax ajax-processed">Remove</a>').click(
             handleRemoveClick));
+        
+        // make a drupal ajax object
+        var base = $input.children('a').attr('id');
+        Drupal.ajax[base] = new Drupal.ajax(
+          base,
+          $input.children('a')[0],
+          {
+            'progress': {'type': 'throbber'},
+            'url': $input.children('a').attr('href'),
+            'event': 'click',
+          }
+        );
       }
 
       function addFilterEventHandlers(context){

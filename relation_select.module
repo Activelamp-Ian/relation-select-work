@@ -978,6 +978,7 @@ function relation_select_entity_get_relations($entity_type, $entity_id, $relatio
     $relations[$record->revision_id]['endpoints'][$record->endpoints_r_index] = $record->endpoints_entity_type . ':' . $record->endpoints_entity_id;
     $releation_id_to_revision[$record->entity_id] = $record->revision_id;
   }    
+
   // order by our delta      
   return relation_select_order_items($entity_id, $field['field_name'], $relations, $releation_id_to_revision, $items);
 }
@@ -1491,5 +1492,6 @@ function _relation_select_view_has_field($fields) {
 function _relation_select_handle_delete($relation, $ajax = 'no') {
   if ($ajax != 'no') {
     relation_delete($relation->rid);
+    cache_clear_all();
   }  
 }
