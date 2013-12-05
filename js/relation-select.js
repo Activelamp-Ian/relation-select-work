@@ -49,11 +49,11 @@
         addRowEventHandlers(context);
 
 
-        // Attach behaviors only once
-        if ($(window).data('remove_link_process') == undefined) {
-          $(window).data('remove_link_process', true);
-          Drupal.attachBehaviors();
-        }
+        // // Attach behaviors only once
+        // if ($(window).data('remove_link_process') == undefined) {
+        //   $(window).data('remove_link_process', true);
+        //   Drupal.attachBehaviors();
+        // }
 
       }
 

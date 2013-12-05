@@ -689,7 +689,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
     }    
 
     if (empty($relations)) {
-      _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, $items, $is_update);
+      _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, $items, $is_update, $relation_type, $entity_id);
     }
     elseif (!empty($relations)) {
       // Relations of this type already exist for this entity.
@@ -711,7 +711,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
           }
           else {
             // Create a new relation.
-            $relation = relation_create($relation_type->relation_type, $endpoints_ids);
+            $relation = relation_create($relation_type->relation_type, $endpoints_ids);            
           }
           $relation_fields = field_info_instances('relation', $relation->relation_type);          
           if (isset($current_item['relation_fields'])) {
@@ -736,6 +736,9 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
           }
           relation_save($relation);
 
+          if (!isset($item["relation_id"])) {
+            $item["relation_id"] = $relation->id;
+          }
         }
         elseif ((isset($current_item['relation_id']) || isset($item['relation_id'])) && !isset($current_item['endpoints'])) {          
           // Delete relations which no longer have endpoints.
@@ -810,6 +813,9 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
     $items[$info['delta']] = array('relation_id' => $info['relation_id']);
   }
 
+  if (empty($relations)) {
+    $items = array();
+  }
   // unset the last element if empty.
   $item = array_pop($items);
   if (isset($item['endpoints'])) {
@@ -823,7 +829,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
   }
 }
 
-function _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, &$items, $is_update) {
+function _relation_select_insert_no_relations($relations, $entity_type, $entity, $field, $instance, $langcode, &$items, $is_update, $relation_type, $entity_id) {
   $relations = array();
   foreach ($items as $parent_delta => $item) {
     foreach ($item as $delta => $current) {
@@ -1054,7 +1060,14 @@ function relation_select_order_items($entity_id, $field_name, $loaded, $relation
       $current_delta = key($info); 
       $true_info = current($info);      
       $is_new = !isset($true_info['endpoints']) || count($true_info['endpoints']) == 0 ? TRUE : FALSE;
-      if ($is_new && !isset($true_info['relation_id'])) {
+      if ($is_new && !isset($true_info['relation_id'])) {        
+        continue;
+      }
+      else if (!$is_new && !isset($true_info['relation_id'])) {
+        $relations_delta[] = array(
+          "endpoints" => $true_info['endpoints'],
+          "delta" => $current_delta++
+        );
         continue;
       }
       $relation_id = $true_info['relation_id'];
@@ -1069,7 +1082,6 @@ function relation_select_order_items($entity_id, $field_name, $loaded, $relation
       $relations_delta[$revision_id]['delta'] = $current_delta;      
     }
   }     
-
   return $relations_delta;
 }
 
