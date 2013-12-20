@@ -4,6 +4,8 @@ function relation_select_install() {
   db_update('system')->fields(array(
     'weight' => 10
   ))->condition('name', 'relation_select')->execute();
+
+  relation_select_add_additional_column();
 }
 
 /**
@@ -18,7 +20,48 @@ function relation_select_update_7100(&$sandbox) {
     ->execute();
 }
 
-function relation_select_update_7300(&$sandbox) {
+/**
+ * hook_field_schema
+ *
+ * Inform the field UI that we will be using a new
+ * database column. This is used on any field that is relation_select
+ * so the entity has a reference to the relation, and so relation select
+ * can determine the order of relations.
+ *
+ * What this field will allow relation select to do is maintain order of
+ * relations on a field. Currently relation select hard loads the relations
+ * out of the database, and returns them. In order to have an order, we 
+ * need to process the relations, and in order to do that we need references to * any and all relations attached to an entity. This column in the database
+ * tables will allow us to do that.
+ */
+function relation_select_field_schema($field) {
+  if ($field['type'] == 'relation_select') {
+    return array(
+      'columns' => array(
+        'relation_id' => array(
+          'type' => 'int',
+          'not null' => TRUE
+        )
+      )
+    );
+  }
+}
+
+/**
+ * Ensure that all current relation_select fields 
+ * have the necessary extra column.
+ */
+function relation_select_update_7101(&$sandbox) {
+  relation_select_add_additional_column();
+}
+
+/**
+ * relation_select_add_additional_column
+ *
+ * Function contains logic to add an extra database
+ * column to every current field that is relation_select.
+ */
+function relation_select_add_additional_column() {
   $extras = array(
     "type" => "int",
     "not null" => TRUE,
@@ -37,17 +80,4 @@ function relation_select_update_7300(&$sandbox) {
     db_add_field("field_data_" . $name, $name . "_relation_id", $extras);
     db_add_field("field_revision_" . $name, "relation_id", $extras);
   } 
-}
-
-function relation_select_field_schema($field) {
-  if ($field['type'] == 'relation_select') {
-    return array(
-      'columns' => array(
-        'relation_id' => array(
-          'type' => 'int',
-          'not null' => TRUE
-        )
-      )
-    );
-  }
 }

@@ -21,3 +21,11 @@ core = "7.x"
 project = "relation_select"
 datestamp = "1386191930"
 
+
+
+; Information added by drush on 2013-12-20
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "relation_select"
+datestamp = "1387564914"
+

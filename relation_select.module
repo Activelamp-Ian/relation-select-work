@@ -700,7 +700,7 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
       $relation_entities = relation_load_multiple($rids);
 
       $item_iter = 0;
-      foreach ($relations as $revision => $item) {
+      foreach ($relations as $revision => &$item) {
         $current_item = $items[$item_iter];
         if (isset($item['endpoints']) && count($item['endpoints'])) {
           $endpoints_ids = relation_select_build_entity_keys($entity_type, $entity_id, $item['endpoints']);
@@ -730,17 +730,16 @@ function relation_select_field_insert($entity_type, $entity, $field, $instance, 
               }
             }
           }
-          else {
-            dpm(array("current" => $current_item, "item" => $item));
-          }
           // make sure field is updatable
           foreach($relation->endpoints[LANGUAGE_NONE] as $delta => $info) {
             $relation->endpoints[LANGUAGE_NONE][$delta]['endpoints_r_index'] = $info['r_index'];
           }
           relation_save($relation);
-
-          if (!isset($item["relation_id"])) {
+          if (isset($relation->id)) {
             $item["relation_id"] = $relation->id;
+          }
+          else {
+            $item["relation_id"] = $relation->rid;
           }
         }
         elseif ((isset($current_item['relation_id']) || isset($item['relation_id'])) && !isset($current_item['endpoints'])) {          
@@ -1503,5 +1502,8 @@ function _relation_select_handle_delete($relation, $ajax = 'no') {
   if ($ajax != 'no') {
     relation_delete($relation->rid);
     cache_clear_all();
+  }  
+}
+ache_clear_all();
   }  
 }
